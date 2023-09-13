@@ -1,0 +1,66 @@
+version: '3.7'
+
+services:
+  api:
+    build: .
+    container_name: api
+    restart: unless-stopped
+    ports:
+      - ${API_PORT}:${API_PORT}
+    networks:
+      - mynetwork
+    depends_on:
+      - pgadmin
+    env_file:
+      - .env
+    volumes:
+      - ./characters:/app:cached
+      - ~/.ssh:/root/.ssh
+      - ~/.bash_history:/root/.bash_history
+    command: python run_api.py
+
+  bot:
+    build: .
+    container_name: bot
+    restart: unless-stopped
+    depends_on:
+      - db
+      - api
+    networks:
+      - mynetwork
+    volumes:
+      - ./characters:/app:cached
+      - ~/.ssh:/root/.ssh
+      - ~/.bash_history:/root/.bash_history
+    env_file:
+      - .env
+    command: python run_bot.py
+
+  db:
+    image: postgres:15.2-alpine
+    container_name: db
+    ports:
+      - ${DATABASE_PORT}:${DATABASE_PORT}
+    networks:
+      - mynetwork
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+
+  pgadmin:
+    container_name: pgadmin
+    restart: unless-stopped
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - 5050:80
+    networks:
+      - mynetwork
+    depends_on:
+      - db
+
+networks:
+  mynetwork:
+    driver: bridge
